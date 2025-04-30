@@ -9,7 +9,9 @@ def to_dag_dataset(data_dict, num_categories):
     src_list = data_dict['src_list']
     dst_list = data_dict['dst_list']
     x_n_list = data_dict['x_n_list']
-    y_list = data_dict['y_list']
+
+    #y_list = data_dict['y_list']
+    y_list = [item['Average operation intensity'] for item in data_dict['metrics_list']]
 
     num_g = len(src_list)
     for i in range(num_g):
@@ -20,25 +22,29 @@ def to_dag_dataset(data_dict, num_categories):
 
     return dataset
 
-def get_tpu_tile():
+def get_traces():
     root_path = os.path.dirname(os.path.abspath(__file__))
-    root_path = os.path.join(root_path, '../../data_files/tpu_tile_processed')
+    root_path = os.path.join(root_path, '../../data_files/traces_processed')
 
     train_path = os.path.join(root_path, 'train.pth')
     val_path = os.path.join(root_path, 'val.pth')
     test_path = os.path.join(root_path, 'test.pth')
 
-    print('Loading TPU Tile dataset...')
-    # Load the pre-processed TPU Tile dataset, where for each kernel graph, we
+    print('Loading Trace dataset...')
+    # Load the pre-processed Trace dataset, where for each kernel graph, we
     # average the normalized runtime over multiple compiler configurations.
     train_set = torch.load(train_path)
     val_set = torch.load(val_path)
     test_set = torch.load(test_path)
+    #train_set = {key: value[:100] for key, value in train_set.items()}
+    #val_set = {key: value[:25] for key, value in val_set.items()}
+    #test_set = {key: value[:25] for key, value in test_set.items()}
 
-    num_categories = torch.cat(train_set['x_n_list']).max().item() + 1
+    num_categories = (torch.cat(train_set['x_n_list']).max(dim=0).values + 1)
+    #num_categories = torch.cat(train_set['x_n_list']).max().item() + 1
+
     train_set = to_dag_dataset(train_set, num_categories)
     val_set = to_dag_dataset(val_set, num_categories)
     test_set = to_dag_dataset(test_set, num_categories)
 
     return train_set, val_set, test_set
-

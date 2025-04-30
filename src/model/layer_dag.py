@@ -64,7 +64,8 @@ class MultiEmbedding(nn.Module):
 
         self.emb_list = nn.ModuleList([
             nn.Embedding(num_x_n_cat_i, hidden_size)
-            for num_x_n_cat_i in num_x_n_cat.tolist()
+            #for num_x_n_cat_i in num_x_n_cat.tolist()
+            for num_x_n_cat_i in num_x_n_cat
         ])
 
     def forward(self, x_n_cat):
@@ -303,7 +304,8 @@ class NodePredModel(nn.Module):
         super().__init__()
 
         self.graph_encoder = graph_encoder
-        num_real_classes = num_x_n_cat - 1
+        #num_real_classes = num_x_n_cat - 1
+        num_real_classes = [x - 1 for x in num_x_n_cat]
         self.x_n_emb = MultiEmbedding(num_real_classes, x_n_emb_size)
         self.t_emb = SinusoidalPE(t_emb_size)
         in_hidden_size = in_hidden_size + t_emb_size + len(num_real_classes) * x_n_emb_size
@@ -319,7 +321,7 @@ class NodePredModel(nn.Module):
             ))
 
         self.pred_list = nn.ModuleList([])
-        num_real_classes = num_real_classes.tolist()
+        #num_real_classes = num_real_classes.tolist()
         for num_classes_f in num_real_classes:
             self.pred_list.append(nn.Sequential(
                 nn.Linear(out_hidden_size, out_hidden_size),
@@ -416,7 +418,9 @@ class LayerDAG(nn.Module):
         if isinstance(num_x_n_cat, int):
             num_x_n_cat = torch.LongTensor([num_x_n_cat])
 
-        self.dummy_x_n = num_x_n_cat - 1
+        #self.dummy_x_n = num_x_n_cat - 1
+        self.dummy_x_n = [x - 1 for x in num_x_n_cat]
+
         hidden_size = len(num_x_n_cat) * node_count_encoder_config['x_n_emb_size'] +\
             node_count_encoder_config['pe_emb_size'] +\
             node_count_encoder_config['y_emb_size']
@@ -541,6 +545,69 @@ class LayerDAG(nn.Module):
 
         return torch.cat(e_mask_list).bool()
 
+    def rule_based_filter(self, x_n_t, x_n_s_probs):
+        """
+        x_n_t[:, 0] -> node_type
+        x_n_t[:, 1] -> comm_type
+        x_n_t[:, 2] -> num_ops
+        x_n_t[:, 3] -> tensor_size
+        x_n_t[:, 4] -> comm_size
+        x_n_t[:, 5] -> parallel_group
+        """
+        valid_mask = (
+            ((x_n_t[:, 0] == 0) & (x_n_t[:, 1] == 3) & (x_n_t[:, 2] != 23) & (x_n_t[:, 3] != 95) & 
+            (x_n_t[:, 4] == 14) & (x_n_t[:, 5] == 3)) |
+            ((x_n_t[:, 0] != 0) & (x_n_t[:, 1] != 3) & (x_n_t[:, 2] == 23) & (x_n_t[:, 3] == 95) & 
+            (x_n_t[:, 4] != 14) & (x_n_t[:, 5] != 3))
+        )
+
+        while not valid_mask.all():
+            for idx in range(len(x_n_t)):
+                if valid_mask[idx] == False:
+                    if x_n_t[idx, 0] == 1:
+                        prob_dist = x_n_s_probs[5][idx].clone() 
+                        prob_dist[3] = 0 
+                        prob_dist /= prob_dist.sum()
+                        x_n_t[idx, 5] = prob_dist.multinomial(1).squeeze(-1)
+
+                        x_n_t[idx, 3] = 95
+                        x_n_t[idx, 2] = 23 
+            
+                        prob_dist = x_n_s_probs[1][idx].clone() 
+                        prob_dist[3] = 0 
+                        prob_dist /= prob_dist.sum()
+                        x_n_t[idx, 1] = prob_dist.multinomial(1).squeeze(-1)
+                        
+                        prob_dist = x_n_s_probs[4][idx].clone() 
+                        prob_dist[14] = 0 
+                        prob_dist /= prob_dist.sum()
+                        x_n_t[idx, 4] = prob_dist.multinomial(1).squeeze(-1)
+
+                    if x_n_t[idx, 0] == 0:
+                        x_n_t[idx, 5] = 3 
+                        
+                        prob_dist = x_n_s_probs[3][idx].clone() 
+                        prob_dist[95] = 0 
+                        prob_dist /= prob_dist.sum()
+                        x_n_t[idx, 3] = prob_dist.multinomial(1).squeeze(-1)
+                        
+                        prob_dist = x_n_s_probs[2][idx].clone() 
+                        prob_dist[23] = 0 
+                        prob_dist /= prob_dist.sum()
+                        x_n_t[idx, 2] = prob_dist.multinomial(1).squeeze(-1)
+
+                        x_n_t[idx, 1] = 3 
+                        x_n_t[idx, 4] = 14 
+
+            valid_mask = (
+            ((x_n_t[:, 0] == 0) & (x_n_t[:, 1] == 3) & (x_n_t[:, 2] != 23) & (x_n_t[:, 3] != 95) & 
+            (x_n_t[:, 4] == 14) & (x_n_t[:, 5] == 3)) |
+            ((x_n_t[:, 0] != 0) & (x_n_t[:, 1] != 3) & (x_n_t[:, 2] == 23) & (x_n_t[:, 3] == 95) & 
+            (x_n_t[:, 4] != 14) & (x_n_t[:, 5] != 3))
+            )
+
+        return x_n_t
+
     @torch.no_grad()
     def sample_node_layer(self,
                           A,
@@ -620,6 +687,7 @@ class LayerDAG(nn.Module):
                 num_query_cumsum)
 
             x_n_s = []
+            x_n_s_probs = []
             for d in range(D):
                 Q_t_d = self.node_diffusion.get_Q(alpha_t, d).to(device)
                 Q_bar_s_d = self.node_diffusion.get_Q(alpha_bar_s, d).to(device)
@@ -633,8 +701,10 @@ class LayerDAG(nn.Module):
                                                Q_bar_t_d, x_n_0_probs_d)
                 x_n_s_d = x_n_s_probs_d.multinomial(1).squeeze(-1)
                 x_n_s.append(x_n_s_d)
+                x_n_s_probs.append(x_n_s_probs_d)
 
             x_n_t = torch.stack(x_n_s, dim=1)
+            x_n_t = self.rule_based_filter(x_n_t, x_n_s_probs)
 
         return torch.split(x_n_t, num_new_nodes.squeeze(-1).tolist())
 
@@ -808,8 +878,11 @@ class LayerDAG(nn.Module):
             init_x_n = torch.LongTensor([[self.dummy_x_n]]).to(device)
         elif isinstance(self.dummy_x_n, torch.Tensor):
             init_x_n = self.dummy_x_n.to(device).unsqueeze(0)
+        elif isinstance(self.dummy_x_n, list):
+            init_x_n = torch.tensor(self.dummy_x_n, dtype=torch.long).to(device).unsqueeze(0)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Unexpected type for dummy_x_n: {type(self.dummy_x_n)}")
+        
         x_n_list = [init_x_n for _ in range(batch_size)]
         batch_x_n = torch.cat(x_n_list)
         batch_y = self.get_batch_y(y_list, x_n_list, device)
