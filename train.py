@@ -13,7 +13,7 @@ from setup_utils import set_seed, load_yaml
 from src.dataset import load_dataset, LayerDAGNodeCountDataset,\
     LayerDAGNodePredDataset, LayerDAGEdgePredDataset, collate_node_count,\
     collate_node_pred, collate_edge_pred
-from src.model import DiscreteDiffusion, EdgeDiscreteDiffusion, LayerDAG
+from src.model import DiscreteDiffusion, EdgeDiscreteDiffusion, LayerDAG, LayerDAGCustom
 
 @torch.no_grad()
 def eval_node_count(device, val_loader, model):
@@ -417,7 +417,14 @@ def main(args):
         'max_level': max(train_node_pred_dataset.input_level.max().item(),
                          val_node_pred_dataset.input_level.max().item())
     }
-    model = LayerDAG(device=device,
+
+    if dataset == 'traces':
+        model = LayerDAGCustom(device=device,
+                     node_diffusion=node_diffusion,
+                     edge_diffusion=edge_diffusion,
+                     **model_config)
+    else:
+        model = LayerDAG(device=device,
                      node_diffusion=node_diffusion,
                      edge_diffusion=edge_diffusion,
                      **model_config)

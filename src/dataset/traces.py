@@ -36,9 +36,9 @@ def get_traces():
     train_set = torch.load(train_path)
     val_set = torch.load(val_path)
     test_set = torch.load(test_path)
-    #train_set = {key: value[:100] for key, value in train_set.items()}
-    #val_set = {key: value[:25] for key, value in val_set.items()}
-    #test_set = {key: value[:25] for key, value in test_set.items()}
+    train_set = {key: value[:100] for key, value in train_set.items()}
+    val_set = {key: value[:25] for key, value in val_set.items()}
+    test_set = {key: value[:25] for key, value in test_set.items()}
 
     num_categories = (torch.cat(train_set['x_n_list']).max(dim=0).values + 1)
     #num_categories = torch.cat(train_set['x_n_list']).max().item() + 1

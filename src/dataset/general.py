@@ -22,7 +22,8 @@ class DAGDataset(Dataset):
         if isinstance(self.dummy_category, torch.Tensor):
             self.dummy_category = self.dummy_category.tolist()
 
-        self.num_categories = num_categories + 1
+        #self.num_categories = num_categories + 1
+        self.num_categories = [x + 1 for x in num_categories]
 
     def __len__(self):
         return len(self.src)

@@ -6,8 +6,8 @@ from tqdm import tqdm
 
 from setup_utils import set_seed
 from src.dataset import load_dataset, DAGDataset
-from src.eval import TPUTileEvaluator
-from src.model import DiscreteDiffusion, EdgeDiscreteDiffusion, LayerDAG
+from src.eval import TPUTileEvaluator, TracesEvaluator
+from src.model import DiscreteDiffusion, EdgeDiscreteDiffusion, LayerDAG, LayerDAGCustom
 
 def sample_tpu_subset(args, device, dummy_category, model, subset):
     syn_set = DAGDataset(dummy_category, label=True)
@@ -22,7 +22,7 @@ def sample_tpu_subset(args, device, dummy_category, model, subset):
                 max_num_steps_n=args.max_num_steps_n,
                 min_num_steps_e=args.min_num_steps_e,
                 max_num_steps_e=args.max_num_steps_e)
-
+            print("one)")
             for j in range(len(batch_edge_index)):
                 edge_index_j = batch_edge_index[j]
                 dst_j, src_j = edge_index_j.cpu()
@@ -66,6 +66,24 @@ def eval_tpu_tile(args, device, model):
     dump_to_file(train_syn_set, 'train.pth', sample_dir)
     dump_to_file(val_syn_set, 'val.pth', sample_dir)
 
+def eval_traces(args, device, model):
+    sample_dir = 'traces_samples'
+    os.makedirs(sample_dir, exist_ok=True)
+
+    evaluator = TracesEvaluator()
+    train_set, val_set, _ = load_dataset('traces')
+
+    train_syn_set = sample_tpu_subset(args, device, train_set.dummy_category, model, train_set)
+    print("done)")
+    val_syn_set = sample_tpu_subset(args, device, train_set.dummy_category, model, val_set)
+    print("done)")
+
+    evaluator.eval(train_syn_set, val_syn_set)
+    print("done")
+
+    dump_to_file(train_syn_set, 'train.pth', sample_dir)
+    dump_to_file(val_syn_set, 'val.pth', sample_dir)
+
 def main(args):
     torch.set_num_threads(args.num_threads)
 
@@ -75,21 +93,31 @@ def main(args):
     ckpt = torch.load(args.model_path)
 
     dataset = ckpt['dataset']
-    assert dataset == 'tpu_tile'
+    #assert dataset == 'tpu_tile'
 
     node_diffusion = DiscreteDiffusion(**ckpt['node_diffusion_config'])
     edge_diffusion = EdgeDiscreteDiffusion(**ckpt['edge_diffusion_config'])
 
-    model = LayerDAG(device=device,
+    if dataset == 'traces':
+        model = LayerDAGCustom(device=device,
                      node_diffusion=node_diffusion,
                      edge_diffusion=edge_diffusion,
                      **ckpt['model_config'])
+    else:
+        model = LayerDAG(device=device,
+                     node_diffusion=node_diffusion,
+                     edge_diffusion=edge_diffusion,
+                     **ckpt['model_config'])
+        
     pprint(ckpt['model_config'])
     model.load_state_dict(ckpt['model_state_dict'])
     model.eval()
     set_seed(args.seed)
 
-    eval_tpu_tile(args, device, model)
+    if dataset == 'traces':
+        eval_traces(args, device, model)
+    else:
+        eval_tpu_tile(args, device, model)
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
