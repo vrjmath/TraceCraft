@@ -1,16 +1,6 @@
-# LayerDAG
+# TraceCraft
 
-[[Paper]](https://arxiv.org/abs/2411.02322)
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Train](#train)
-- [Sample](#sample)
-- [Eval](#eval)
-- [Frequently Asked Questions](#frequently-asked-questions)
-  * [Q1: libcusparse.so](#q1-libcusparseso)
-- [Citation](#citation)
+[[Paper]](https://asplos26-spring.hotcrp.com/doc/asplos26-spring-paper79.pdf)
 
 ## Installation
 
@@ -65,11 +55,4 @@ export LD_LIBRARY_PATH=/home/miniconda3/envs/LayerDAG/lib:$LD_LIBRARY_PATH
 
 ## Citation
 
-```
-@inproceedings{li2024layerdag,
-    title={Layer{DAG}: A Layerwise Autoregressive Diffusion Model for Directed Acyclic Graph Generation},
-    author={Mufei Li and Viraj Shitole and Eli Chien and Changhai Man and Zhaodong Wang and Srinivas Sridharan and Ying Zhang and Tushar Krishna and Pan Li},
-    booktitle={International Conference on Learning Representations},
-    year={2025}
-}
-```
+
