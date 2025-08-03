@@ -23,6 +23,7 @@ class Args():
         # self.graph_type = 'caveman_small'
         # self.graph_type = 'caveman_small_single'
         # self.graph_type = 'community4'
+        # self.graph_type = 'grid'
         self.graph_type = 'traces'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
@@ -67,7 +68,7 @@ class Args():
         self.epochs = 3000 # now one epoch means self.batch_ratio x batch_size
         self.epochs_test_start = 100
         self.epochs_test = 100
-        self.epochs_log = 100
+        self.epochs_log = 1
         self.epochs_save = 100
 
         self.lr = 0.003

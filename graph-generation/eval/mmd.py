@@ -69,10 +69,15 @@ def disc(samples1, samples2, kernel, is_parallel=True, *args, **kwargs):
             for s2 in samples2:
                 d += kernel(s1, s2, *args, **kwargs)
     else:
+        from tqdm import tqdm
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            for dist in executor.map(kernel_parallel_worker, 
-                    [(s1, samples2, partial(kernel, *args, **kwargs)) for s1 in samples1]):
-                d += dist
+            futures = [
+                executor.submit(kernel_parallel_worker, (s1, samples2, partial(kernel, *args, **kwargs)))
+                for s1 in samples1
+            ]
+            for f in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="MMD progress"):
+                d += f.result()
+
     d /= len(samples1) * len(samples2)
     return d
 

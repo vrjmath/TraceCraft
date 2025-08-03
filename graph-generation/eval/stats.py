@@ -50,7 +50,7 @@ def degree_stats(graph_ref_list, graph_pred_list, is_parallel=False):
             degree_temp = np.array(nx.degree_histogram(graph_pred_list_remove_empty[i]))
             sample_pred.append(degree_temp)
     print(len(sample_ref),len(sample_pred))
-    mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian_emd)
+    mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian)
     elapsed = datetime.now() - prev
     if PRINT_TIME:
         print('Time computing degree mmd: ', elapsed)
@@ -97,8 +97,8 @@ def clustering_stats(graph_ref_list, graph_pred_list, bins=100, is_parallel=True
                     clustering_coeffs_list, bins=bins, range=(0.0, 1.0), density=False)
             sample_pred.append(hist)
     
-    mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian_emd,
-                               sigma=1.0/10, distance_scaling=bins)
+    mmd_dist = mmd.compute_mmd(sample_ref, sample_pred, kernel=mmd.gaussian,
+                               sigma=1.0/10)
     elapsed = datetime.now() - prev
     if PRINT_TIME:
         print('Time computing clustering mmd: ', elapsed)

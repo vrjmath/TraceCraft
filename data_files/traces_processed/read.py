@@ -1,17 +1,14 @@
 import torch
 import numpy as np
+import random
 
-# Load the data
-data = torch.load('train.pth', map_location='cpu')
-
-# Get lists
+# Load your real dataset
+data = torch.load('random_dag_baseline.pth', map_location='cpu')
 x_n_list = data['x_n_list']
 src_list = data['src_list']
 dst_list = data['dst_list']
 
-# ----------------------------
-# Graph-level stats
-# ----------------------------
+# Compute number of nodes and edges per graph in real data
 num_nodes = [x.shape[0] for x in x_n_list]
 num_edges = [s.shape[0] for s in src_list]
 
@@ -25,29 +22,22 @@ def describe(arr):
         'max': int(np.max(arr)),
     }
 
-print("📊 Graph-level Statistics:")
+print("📊 Real Graph Statistics:")
 print("Number of nodes per graph:", describe(num_nodes))
 print("Number of edges per graph:", describe(num_edges))
 
-# ----------------------------
-# Node feature stats (per attribute)
-# ----------------------------
-all_features = torch.cat(x_n_list, dim=0)  # shape [total_nodes, 6]
-feature_stats = {}
+import numpy as np
 
-print("\n📈 Node Feature Statistics (per attribute):")
-for i in range(all_features.shape[1]):
-    values = all_features[:, i].numpy()
-    feature_stats[f'Feature {i + 1}'] = {
-        'min': float(np.min(values)),
-        '25%': float(np.percentile(values, 25)),
-        '50% (median)': float(np.median(values)),
-        '75%': float(np.percentile(values, 75)),
-        'max': float(np.max(values)),
-    }
+# Assuming node features are categorical or discrete integers
+num_features = x_n_list[0].shape[1]
 
-# Pretty print
-for feat, stats in feature_stats.items():
-    print(f"\n{feat}:")
-    for k, v in stats.items():
-        print(f" - {k}: {v}")
+# Collect all values per feature across all graphs
+all_features = [np.concatenate([x[:, i].numpy() for x in x_n_list]) for i in range(num_features)]
+
+for i, feature_values in enumerate(all_features):
+    unique_vals = np.unique(feature_values)
+    print(f"Node attribute {i}: possible values = {unique_vals}")
+
+
+
+
