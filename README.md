@@ -1,6 +1,6 @@
 # TraceCraft
 
-[[Paper]](https://asplos26-spring.hotcrp.com/doc/asplos26-spring-paper79.pdf)
+[[Paper]] <!-- This is a comment (https://asplos26-spring.hotcrp.com/doc/asplos26-spring-paper79.pdf) -->
 
 ## Installation
 
