@@ -1,5 +1,6 @@
 import torch
 from util import compute_graph_metrics, compute_percentiles, compare_distributions
+from pathlib import Path
 
 def generate_report(real, generated, output_file):
     real_src, real_dst = real['src_list'], real['dst_list']
@@ -35,7 +36,8 @@ def generate_report(real, generated, output_file):
 
     with open(output_file, 'w') as f:
         f.write("=== Graph Metrics Report ===\n")
-        
+        f.write("=== Dataset Keys: ")
+        f.write(", ".join(generated.keys()) + "\n")
         f.write("\n=== KL Divergence Results ===\n")
         for metric, value in dist_results["kl_divergences"].items():
             f.write(f"{metric}: {value}\n")
@@ -56,6 +58,16 @@ def generate_report(real, generated, output_file):
     print(f"Report has been saved to {output_file}")
 
 
-real = torch.load("/usr/scratch/vshitole6/TraceCraft/analysis/real.pth")
-generated = torch.load("/usr/scratch/vshitole6/TraceCraft/analysis/generated.pth")
-generate_report(real, generated, "graph_report.txt")
+base_dir = Path(__file__).resolve().parent
+
+dataset_dir = base_dir / "dataset"
+report_dir = base_dir / "report"
+
+real = torch.load(dataset_dir / "real.pth")
+generated_layerdag = torch.load(dataset_dir / "generated_tracecraft.pth")
+generated_naive = torch.load(dataset_dir / "generated_naive.pth")
+generated_proteus = torch.load(dataset_dir / "generated_proteus.pth")
+
+generate_report(real, generated_naive, report_dir / "naive_baseline_report.txt")
+generate_report(real, generated_layerdag, report_dir / "tracecraft_report.txt")
+generate_report(real, generated_proteus, report_dir / "proteus_report.txt")

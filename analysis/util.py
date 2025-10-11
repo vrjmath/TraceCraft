@@ -1,6 +1,8 @@
 import networkx as nx
 import torch
 import numpy as np
+from scipy.stats import wasserstein_distance
+
 
 def build_nx_graph(src_list, dst_list, idx):
     src = src_list[idx].tolist()
@@ -82,7 +84,7 @@ def kl_divergence(p, q, eps=1e-10):
 def rbf_kernel_np(X, Y, gamma=1.0):
     X = np.asarray(X).reshape(-1,1)
     Y = np.asarray(Y).reshape(-1,1)
-    dist2 = (X**2).sum(axis=1)[:,None] + (Y**2).sum(axis=1)[None,:] - 2*X.dot(Y.T)
+    dist2 = np.sum((X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
     return np.exp(-gamma * dist2)
 
 def compute_mmd(x, y, gamma=1.0, max_samples=1000):
@@ -92,16 +94,36 @@ def compute_mmd(x, y, gamma=1.0, max_samples=1000):
         x = np.random.choice(x, max_samples, replace=False)
     if len(y) > max_samples:
         y = np.random.choice(y, max_samples, replace=False)
+
     XX = rbf_kernel_np(x, x, gamma=gamma)
     YY = rbf_kernel_np(y, y, gamma=gamma)
     XY = rbf_kernel_np(x, y, gamma=gamma)
-    return XX.mean() + YY.mean() - 2*XY.mean()
 
-def wasserstein_1d(u, v):
-    u_sorted = np.sort(u)
-    v_sorted = np.sort(v)
-    n = min(len(u_sorted), len(v_sorted))
-    return np.mean(np.abs(u_sorted[:n] - v_sorted[:n]))
+    m = len(x)
+    n = len(y)
+
+    return (XX.sum() - np.trace(XX)) / (m * (m - 1)) + \
+           (YY.sum() - np.trace(YY)) / (n * (n - 1)) - \
+           2 * XY.mean()
+
+def wasserstein_1d(u, v, normalize=True):
+    u = np.asarray(u)
+    v = np.asarray(v)
+
+    if normalize:
+        combined = np.concatenate([u, v])
+        min_val = combined.min()
+        max_val = combined.max()
+        range_val = max_val - min_val
+
+        if range_val > 0:
+            u = (u - min_val) / range_val
+            v = (v - min_val) / range_val
+        else:
+            u = np.zeros_like(u)
+            v = np.zeros_like(v)
+
+    return wasserstein_distance(u, v)
 
 def compute_percentiles(data):
     return [
