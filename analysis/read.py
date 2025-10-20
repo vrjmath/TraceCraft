@@ -1,52 +1,68 @@
+import pickle
+import networkx as nx
+import numpy as np
 import torch
-from pathlib import Path
 
-current_dir = Path(__file__).parent
+def induce_orientation(G):
+    G_prime = nx.DiGraph()
+    for component in nx.connected_components(G):
+        subgraph = G.subgraph(component).copy()
+        nodes = list(subgraph.nodes)
+        if len(nodes) <= 1:
+            continue 
 
-train_path = current_dir.parent / 'data_files' / 'traces_processed' / 'train.pth'
-test_path = current_dir.parent / 'data_files' / 'traces_processed' / 'test.pth'
-val_path = current_dir.parent / 'data_files' / 'traces_processed' / 'val.pth'
+        root = nodes[0]
+        ord_ = {node: None for node in subgraph.nodes}
+        bfs_order = list(nx.bfs_edges(subgraph, root))
+        for i, (u, v) in enumerate(bfs_order):
+            ord_[u] = i
+            ord_[v] = i
 
-train_dict = torch.load(str(train_path), map_location="cpu")
-test_dict = torch.load(str(test_path), map_location="cpu")
-val_dict = torch.load(str(val_path), map_location="cpu")
+        E_prime = []
+        for u, v in subgraph.edges:
+            if ord_[u] is not None and ord_[v] is not None:
+                if ord_[u] < ord_[v]:
+                    E_prime.append((u, v))
+                else:
+                    E_prime.append((v, u))
 
-data_dict = {}
-
-for key in train_dict:
-    if key in test_dict and key in val_dict:
-        data_dict[key] = train_dict[key] + test_dict[key] + val_dict[key]
-    else:
-        data_dict[key] = train_dict.get(key, []) + test_dict.get(key, []) + val_dict.get(key, [])
-
-
-
-print("Keys in dictionary:", list(data_dict.keys()))
-
-num_graphs = len(data_dict['src_list'])
-print("Number of graphs:", num_graphs)
-
-total_nodes = 0
-total_edges = 0
-
-for i in range(num_graphs):
-    src = data_dict['src_list'][i]
-    dst = data_dict['dst_list'][i]
-    nodes = data_dict['x_n_list'][i].size(0) 
-    edges = src.size(0) 
-
-    total_nodes += nodes
-    total_edges += edges
-
-avg_nodes = total_nodes / num_graphs
-avg_edges = total_edges / num_graphs
-
-print(f"Average number of nodes per graph: {avg_nodes:.2f}")
-print(f"Average number of edges per graph: {avg_edges:.2f}")
+        G_prime.add_edges_from(E_prime)
+    
+    return G_prime
 
 
-from pprint import pprint
+def load_graphs_from_dat(file_path):
+    with open(file_path, 'rb') as f:
+        graph_list = pickle.load(f)
+    return graph_list
 
-print("Example from metric_list:")
-pprint(data_dict['metrics_list'][0])
+graph_file = '/usr/scratch/vshitole6/TraceCraft/graph-generation/graphs/GraphRNN_RNN_traces_4_128_pred_100_1.dat'
+graphs = load_graphs_from_dat(graph_file)
 
+x_n_list = []
+src_list = []
+dst_list = []
+
+for g in graphs[:400]: 
+    directed_g = induce_orientation(g)
+    
+    src_nodes = torch.tensor([u for u, v in directed_g.edges()])
+    dst_nodes = torch.tensor([v for u, v in directed_g.edges()])
+    
+    src_list.append(src_nodes)
+    dst_list.append(dst_nodes)
+    
+    n_nodes = directed_g.number_of_nodes()
+    node_features = torch.zeros(n_nodes, 1) 
+    x_n_list.append(node_features)
+
+data = {
+    'x_n_list': x_n_list,
+    'src_list': src_list,
+    'dst_list': dst_list
+}
+
+output_file = 'proteus_generated.pth'
+torch.save(data, output_file)
+
+print(f"Data saved to {output_file}")

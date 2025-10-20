@@ -12,7 +12,7 @@ def build_nx_graph(src_list, dst_list, idx):
     G.add_edges_from(zip(src, dst))
     return G
 
-def compute_graph_metrics(src_list, dst_list):
+def compute_graph_metrics(src_list, dst_list, x_n_list=None):
     avg_in_deg, avg_out_deg, num_layers, num_nodes, num_edges = [], [], [], [], []
     num_dags, num_weakly_connected, num_graphs = 0, 0, len(src_list)  # initialize new metrics
     
@@ -39,6 +39,12 @@ def compute_graph_metrics(src_list, dst_list):
         else:
             num_layers.append(0)
     
+    node_type_values = []
+    if x_n_list is not None:
+        for x_n in x_n_list:
+            first_attr = x_n[:, 0].tolist()  # assuming x_n is a 2D tensor [num_nodes, 6]
+            node_type_values.extend(first_attr)
+    
     return {
         "avg_in_deg": avg_in_deg, 
         "avg_out_deg": avg_out_deg,  
@@ -47,7 +53,8 @@ def compute_graph_metrics(src_list, dst_list):
         "num_edges": num_edges,
         "num_dags": num_dags,  
         "num_weakly_connected": num_weakly_connected,  
-        "num_graphs": num_graphs 
+        "num_graphs": num_graphs,
+        "node_types": node_type_values
     }
 
 def compare_distributions(real_metrics, generated_metrics):

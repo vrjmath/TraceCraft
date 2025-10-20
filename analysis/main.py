@@ -3,11 +3,8 @@ from util import compute_graph_metrics, compute_percentiles, compare_distributio
 from pathlib import Path
 
 def generate_report(real, generated, output_file):
-    real_src, real_dst = real['src_list'], real['dst_list']
-    generated_src, generated_dst = generated['src_list'], generated['dst_list']
-    
-    real_metrics = compute_graph_metrics(real_src, real_dst)
-    generated_metrics = compute_graph_metrics(generated_src, generated_dst)
+    real_metrics = compute_graph_metrics(real['src_list'], real['dst_list'], real['x_n_list'])
+    generated_metrics = compute_graph_metrics(generated['src_list'], generated['dst_list'], generated['x_n_list'])
 
     report_data = {
         'Real Data': {
@@ -67,7 +64,10 @@ real = torch.load(dataset_dir / "real.pth")
 generated_layerdag = torch.load(dataset_dir / "generated_tracecraft.pth")
 generated_naive = torch.load(dataset_dir / "generated_naive.pth")
 generated_proteus = torch.load(dataset_dir / "generated_proteus.pth")
-
+generated_layerdag_old = torch.load(dataset_dir / "generated_tracecraft_old.pth")
+generated_layerdag_old2 = torch.load(dataset_dir / "generated_tracecraft_old2.pth")
 generate_report(real, generated_naive, report_dir / "naive_baseline_report.txt")
 generate_report(real, generated_layerdag, report_dir / "tracecraft_report.txt")
 generate_report(real, generated_proteus, report_dir / "proteus_report.txt")
+generate_report(real, generated_layerdag_old, report_dir / "tracecraft_old_report.txt")
+generate_report(real, generated_layerdag_old2, report_dir / "tracecraft_old_report2.txt")
