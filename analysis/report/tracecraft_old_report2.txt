@@ -1,0 +1,43 @@
+=== Graph Metrics Report ===
+=== Dataset Keys: src_list, dst_list, x_n_list, y_list
+
+=== KL Divergence Results ===
+num_nodes: 0.189
+num_edges: 0.219
+num_layers: 0.192
+avg_in_deg: 0.01
+avg_out_deg: 0.01
+
+=== MMD Results ===
+num_nodes: 0.019
+num_edges: 0.0186
+num_layers: 0.0285
+avg_in_deg: 0.24
+avg_out_deg: 0.24
+
+=== Wasserstein Distance Results ===
+num_nodes: 0.437
+num_edges: 0.348
+num_layers: 0.143
+avg_in_deg: 0.172
+avg_out_deg: 0.172
+
+=== Real Data ===
+# Graphs: 400
+# DAGs: 400
+# Weakly Connected: 400
+Nodes: [96, 226.75, 340.0, 437.0, 709]
+Edges: [130, 278.0, 433.0, 539.0, 845]
+# Layers: [48, 91.0, 144.0, 195.0, 258]
+Avg In-degree: [1.176, 1.217, 1.235, 1.279, 1.384]
+Avg Out-degree: [1.176, 1.217, 1.235, 1.279, 1.384]
+
+=== Generated Data ===
+# Graphs: 400
+# DAGs: 400
+# Weakly Connected: 284
+Nodes: [27, 720.5, 937.5, 1023.25, 1156]
+Edges: [31, 1154.75, 1546.0, 1751.25, 2829]
+# Layers: [7, 75.0, 107.0, 147.25, 227]
+Avg In-degree: [0.954, 1.504, 1.607, 1.752, 3.235]
+Avg Out-degree: [0.954, 1.504, 1.607, 1.752, 3.235]
